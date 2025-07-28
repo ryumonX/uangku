@@ -28,6 +28,8 @@ export default function TransactionTable({
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
           <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Jumlah</th>
           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kategori</th>
+          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pos</th>
+          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Negara</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Catatan</th>
           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Invoice</th>
           <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
@@ -83,6 +85,34 @@ export default function TransactionTable({
                     : <ArrowDown className="w-4 h-4 mr-1" />}
                   {t.category}
                 </span>
+              )}
+            </td>
+
+            {/* POS */}
+            <td className="px-6 py-4 text-center">
+              {editingId === t.id ? (
+                <input
+                  value={editedData.pos}
+                  onChange={(e) => setEditedData({ ...editedData, pos: e.target.value })}
+                  className="px-2 py-1 border rounded w-full text-sm text-center"
+                  placeholder="Contoh: BSD, Pelatihan"
+                />
+              ) : (
+                <span className="text-sm text-gray-700">{t.pos || '-'}</span>
+              )}
+            </td>
+
+            {/* NEGARA */}
+            <td className="px-6 py-4 text-center">
+              {editingId === t.id ? (
+                <input
+                  value={editedData.country}
+                  onChange={(e) => setEditedData({ ...editedData, country: e.target.value })}
+                  className="px-2 py-1 border rounded w-full text-sm text-center"
+                  placeholder="Contoh: Indonesia"
+                />
+              ) : (
+                <span className="text-sm text-gray-700">{t.country || '-'}</span>
               )}
             </td>
 

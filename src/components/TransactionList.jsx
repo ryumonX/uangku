@@ -85,6 +85,8 @@ export default function TransactionList({ refreshTrigger }) {
         note: editedData.note,
         category: editedData.category,
         type_transaction: editedData.type_transaction,
+        pos: editedData.pos || null,
+        country: editedData.country || null,
       })
       .eq('id', editingId)
 
