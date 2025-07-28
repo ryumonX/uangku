@@ -27,7 +27,7 @@ export default function TransactionFilters({
     localSearch !== ''
 
   return (
-<div className="bg-[#dbeafe]/60 backdrop-blur-md shadow-sm hover:shadow-md transition duration-300">
+    <div className="bg-[#dbeafe]/60 backdrop-blur-md shadow-sm hover:shadow-md transition duration-300">
       {/* Mobile Header */}
       <div className="lg:hidden px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -46,9 +46,8 @@ export default function TransactionFilters({
           className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
         >
           <FunnelSimple
-            className={`w-5 h-5 text-slate-600 transition-transform ${
-              isExpanded ? 'rotate-180' : ''
-            }`}
+            className={`w-5 h-5 text-slate-600 transition-transform ${isExpanded ? 'rotate-180' : ''
+              }`}
           />
         </button>
       </div>
@@ -70,11 +69,10 @@ export default function TransactionFilters({
 
       {/* Filters Content */}
       <div
-        className={`px-4 lg:px-6 transition-all duration-300 ${
-          isExpanded || window.innerWidth >= 1024
-            ? 'pb-6'
-            : 'pb-0 max-h-0 overflow-hidden lg:max-h-none lg:pb-6'
-        }`}
+        className={`px-4 lg:px-6 transition-all duration-300 ${isExpanded || window.innerWidth >= 1024
+          ? 'pb-6'
+          : 'pb-0 max-h-0 overflow-hidden lg:max-h-none lg:pb-6'
+          }`}
       >
         {/* Search Bar */}
         <div className="mb-4 lg:mb-6">
@@ -115,6 +113,24 @@ export default function TransactionFilters({
             </select>
           </div>
 
+          {/* POS Filter */}
+          <div className="group">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              POS
+            </label>
+            <select
+              value={filters.pos}
+              onChange={(e) => onChange('pos', e.target.value)}
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all shadow-sm hover:shadow-md cursor-pointer"
+            >
+              <option value="">Semua POS</option>
+              <option value="Penempatan">Penempatan</option>
+              <option value="Pelatihan">Pelatihan</option>
+              <option value="BSD">BSD</option>
+              <option value="LPK">LPK</option>
+            </select>
+          </div>
+
           <div className="group">
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Kategori
@@ -132,6 +148,24 @@ export default function TransactionFilters({
               ))}
             </select>
           </div>
+
+          {/* Country Filter */}
+          <div className="group">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Negara
+            </label>
+            <select
+              value={filters.country}
+              onChange={(e) => onChange('country', e.target.value)}
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all shadow-sm hover:shadow-md cursor-pointer"
+            >
+              <option value="">Semua Negara</option>
+              <option value="Kuwait">🇰🇼 Kuwait</option>
+              <option value="Turki">🇹🇷 Turki</option>
+              <option value="Lainnya">🌍 Negara Lain</option>
+            </select>
+          </div>
+
 
           <div className="group">
             <label className="block text-sm font-medium text-slate-700 mb-2">

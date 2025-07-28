@@ -19,7 +19,7 @@ export default function TransactionList({ refreshTrigger }) {
   const [categories, setCategories] = useState([])
 
   const [filters, setFilters] = useState({
-    type: 'all', category: '', dateFrom: '', dateTo: '', search: ''
+    type: 'all', category: '', dateFrom: '', dateTo: '', search: '', pos: '', country: '',
   })
 
   const fetchCategories = async () => {
@@ -51,6 +51,9 @@ export default function TransactionList({ refreshTrigger }) {
     if (currentFilters.dateFrom) query = query.gte('date', currentFilters.dateFrom)
     if (currentFilters.dateTo) query = query.lte('date', currentFilters.dateTo)
     if (currentFilters.search) query = query.ilike('note', `%${currentFilters.search}%`)
+    if (currentFilters.pos) query = query.eq('pos', currentFilters.pos)
+    if (currentFilters.country) query = query.eq('country', currentFilters.country)
+
 
     const { count } = await query
     const { data, error } = await query.order('date', { ascending: false }).range(from, to)
@@ -112,7 +115,7 @@ export default function TransactionList({ refreshTrigger }) {
 
   const resetFilters = () => {
     const resetFilters = {
-      type: 'all', category: '', dateFrom: '', dateTo: '', search: ''
+      type: 'all', category: '', dateFrom: '', dateTo: '', search: '', country: '', pos: '',
     }
     setFilters(resetFilters)
     setCurrentPage(1)
