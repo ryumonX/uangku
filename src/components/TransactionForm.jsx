@@ -7,9 +7,10 @@ import {
   Tag,
   FileText,
   TrendUp,
-  TrendDown
+  TrendDown,
 } from 'phosphor-react'
 import { supabase } from '../services/supabaseClient'
+import FilePicker from './FilePicker'
 
 function TransactionForm({ onClose, onSuccess }) {
   const [data, setData] = useState({
@@ -285,36 +286,7 @@ function TransactionForm({ onClose, onSuccess }) {
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <UploadSimple size={14} /> Bukti Transaksi
             </label>
-            <div
-              className={`relative border-2 border-dashed rounded-xl p-4 transition-all ${dragActive ? 'border-blue-400 bg-blue-50' : file ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400'}`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <div className="text-center">
-                {file ? (
-                  <div className="text-green-600 flex justify-center items-center gap-2">
-                    <UploadSimple size={18} /> {file.name}
-                  </div>
-                ) : (
-                  <>
-                    <UploadSimple size={20} className="mx-auto mb-2 text-gray-500" />
-                    <p className="text-xs text-gray-500">
-                      <span className="font-medium text-blue-600">Klik untuk upload</span> atau drag & drop
-                    </p>
-                    <p className="text-xs mt-1 text-gray-400">PNG, JPG hingga 10MB</p>
-                  </>
-                )}
-              </div>
-            </div>
+            <FilePicker onFileChange={setFile} />
           </div>
 
           {/* Submit */}
