@@ -34,6 +34,11 @@ export default function TransactionTable({
     return candidate ? candidate.name : '-'
   }
 
+  // 🟢 Filter hanya transaksi Jepang
+  const filteredTransactions = transactions.filter(
+    (t) => t.country?.toLowerCase() === 'jepang'
+  )
+
   return (
     <div className="overflow-x-auto rounded-2xl shadow-lg border border-gray-200">
       <table className="w-full border-collapse">
@@ -63,7 +68,7 @@ export default function TransactionTable({
 
         {/* BODY */}
         <tbody className="divide-y divide-gray-200 bg-white">
-          {transactions.map((t, idx) => (
+          {filteredTransactions.map((t, idx) => (
             <tr
               key={t.id}
               className={`${
@@ -128,11 +133,6 @@ export default function TransactionTable({
               <td className="px-6 py-4 text-sm text-center text-slate-700">
                 {t.country || '-'}
               </td>
-
-              {/* KANDIDAT
-              <td className="px-6 py-4 text-sm text-center text-slate-700">
-                {getCandidateName(t.candidate_id)}
-              </td> */}
 
               {/* CATATAN */}
               <td className="px-6 py-4 text-sm">

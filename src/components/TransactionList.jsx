@@ -54,7 +54,6 @@ export default function TransactionList({ refreshTrigger }) {
     if (currentFilters.pos) query = query.eq('pos', currentFilters.pos)
     if (currentFilters.country) query = query.eq('country', currentFilters.country)
 
-
     const { count } = await query
     const { data, error } = await query.order('date', { ascending: false }).range(from, to)
 
@@ -80,24 +79,47 @@ export default function TransactionList({ refreshTrigger }) {
     setEditedData(item)
   }
 
-  const handleSave = async () => {
-    const { error } = await supabase
-      .from('transactions')
-      .update({
-        amount: parseFloat(editedData.amount),
-        note: editedData.note,
-        category: editedData.category,
-        type_transaction: editedData.type_transaction,
-        pos: editedData.pos || null,
-        country: editedData.country || null,
-      })
-      .eq('id', editingId)
+const handleSave = async () => {
+  let invoiceUrl = editedData.invoice_url || null
 
-    if (!error) {
-      setEditingId(null)
-      fetchData(currentPage)
+  // kalau ada file baru
+  if (editedData.invoiceFile) {
+    const file = editedData.invoiceFile
+    const filePath = `invoices/${editingId}-${Date.now()}-${file.name}`
+
+    const { error: uploadError } = await supabase.storage
+      .from("invoices")
+      .upload(filePath, file, { upsert: true })
+
+    if (uploadError) {
+      console.error("Upload invoice gagal:", uploadError)
+      return
     }
+
+    const { data } = supabase.storage.from("invoices").getPublicUrl(filePath)
+    invoiceUrl = data.publicUrl
   }
+
+  const { error } = await supabase
+    .from('transactions')
+    .update({
+      amount: parseFloat(editedData.amount),
+      note: editedData.note,
+      category: editedData.category,
+      type_transaction: editedData.type_transaction,
+      pos: editedData.pos || null,
+      country: editedData.country || null,
+      date: editedData.date || null,
+      invoice_url: invoiceUrl, // ✅ sekarang pasti update
+    })
+    .eq('id', editingId)
+
+  if (!error) {
+    setEditingId(null)
+    fetchData(currentPage)
+  }
+}
+
 
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value }

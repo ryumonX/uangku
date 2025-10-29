@@ -1,94 +1,157 @@
 import { useState } from 'react'
 import {
-  X,
-  UploadSimple,
-  CalendarBlank,
-  CurrencyDollarSimple,
-  Tag,
-  FileText,
-  TrendUp,
-  TrendDown,
+  X, UploadSimple, CalendarBlank, CurrencyDollarSimple,
+  Tag, FileText, TrendUp, TrendDown,
 } from 'phosphor-react'
 import { supabase } from '../services/supabaseClient'
 import FilePicker from './FilePicker'
 
+// Komponen untuk tipe transaksi
+const TransactionTypeSelector = ({ type, onChange }) => (
+  <div className="space-y-2">
+    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+      <Tag size={14} /> Tipe Transaksi
+    </label>
+    <div className="grid grid-cols-2 gap-2">
+      {['pemasukan', 'pengeluaran'].map(t => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm ${
+            type === t 
+              ? `border-${t === 'pemasukan' ? 'green' : 'red'}-500 bg-${t === 'pemasukan' ? 'green' : 'red'}-50 text-${t === 'pemasukan' ? 'green' : 'red'}-700`
+              : 'border-gray-200 text-gray-600'
+          }`}
+        >
+          {t === 'pemasukan' ? <TrendUp size={16} /> : <TrendDown size={16} />}
+          {t === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
+        </button>
+      ))}
+    </div>
+  </div>
+)
+
+// Komponen untuk pos selector
+const PosSelector = ({ type, pos, onChange }) => (
+  <div className="space-y-2">
+    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+      <Tag size={14} /> Pos
+    </label>
+    <div className="grid grid-cols-2 gap-2">
+      {(type === 'pemasukan' ? ['Penempatan', 'Pelatihan'] : ['BSD', 'LPK']).map(item => (
+        <button
+          key={item}
+          type="button"
+          onClick={() => onChange(item)}
+          className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm
+            ${pos === item
+              ? type === 'pemasukan'
+                ? 'border-green-500 bg-green-50 text-green-700'
+                : 'border-red-500 bg-red-50 text-red-700'
+              : 'border-gray-200 text-gray-600'
+            }`}
+        >
+          {item}
+        </button>
+      ))}
+    </div>
+  </div>
+)
+
+// Komponen input field
+const InputField = ({ label, icon, type = 'text', value, onChange, placeholder, required = false, options = null }) => (
+  <div className="space-y-2">
+    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+      {icon} {label}
+    </label>
+    {options ? (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50"
+        required={required}
+      >
+        <option value="">-- Pilih {label} --</option>
+        {options.map(opt => (
+          <option key={opt.value || opt} value={opt.value || opt}>
+            {opt.label || opt}
+          </option>
+        ))}
+      </select>
+    ) : (
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full p-2.5 border border-gray-200 rounded-xl text-sm ${type === 'date' ? 'bg-gray-50' : ''}`}
+        required={required}
+      />
+    )}
+  </div>
+)
+
 function TransactionForm({ onClose, onSuccess }) {
   const [data, setData] = useState({
     date: new Date().toISOString().split('T')[0],
-    pos: '',
-    amount: '',
-    category: '',
-    note: '',
-    country: '',
-    type_transaction: 'pengeluaran'
+    pos: '', amount: '', category: '', note: '', country: '',
+    type_transaction: 'pengeluaran',
   })
-
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [dragActive, setDragActive] = useState(false)
+
+  const updateData = (key, value) => setData(prev => ({ ...prev, [key]: value }))
+
+  const handleFileUpload = async () => {
+    if (!file) return null
+    
+    const fileExt = file.name.split('.').pop()
+    const filePath = `invoices/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+    
+    const { data: uploadData, error } = await supabase.storage
+      .from('invoices')
+      .upload(filePath, file)
+    
+    if (error) throw new Error('Gagal upload file: ' + error.message)
+    
+    const { data: publicData } = supabase.storage
+      .from('invoices')
+      .getPublicUrl(uploadData.path)
+    
+    return publicData?.publicUrl
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
+    
     if (!data.amount || isNaN(data.amount) || parseFloat(data.amount) <= 0) {
       alert('Jumlah harus angka yang valid dan lebih dari 0')
       return
     }
 
     setLoading(true)
-
     try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
-
-      if (!session || sessionError) {
-        throw new Error('Kamu belum login atau sesi habis')
-      }
-
-      const user = session.user
-      let invoice_url = null
-
-      if (file) {
-        const fileExt = file.name.split('.').pop()
-        const filePath = `invoices/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('invoices')
-          .upload(filePath, file)
-
-        if (uploadError || !uploadData) {
-          throw new Error('Gagal upload file: ' + (uploadError?.message || 'Unknown'))
-        }
-
-        const { data: publicData } = supabase.storage
-          .from('invoices')
-          .getPublicUrl(uploadData.path)
-
-        invoice_url = publicData?.publicUrl || null
-      }
-
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (!session || sessionError) throw new Error('Kamu belum login atau sesi habis')
+      
+      const invoice_url = await handleFileUpload()
+      
       const payload = {
         ...data,
         amount: parseFloat(data.amount),
         invoice_url,
-        user_id: user.id,
+        user_id: session.user.id,
       }
 
-      const { error: insertError } = await supabase.from('transactions').insert(payload)
-
-      if (insertError) throw new Error(insertError.message)
+      const { error } = await supabase.from('transactions').insert(payload)
+      if (error) throw new Error(error.message)
 
       alert('Transaksi berhasil disimpan!')
       setData({
         date: new Date().toISOString().split('T')[0],
-        amount: '',
-        category: '',
-        note: '',
-        pos: '',
-        country: '',
-        type_transaction: 'pengeluaran'
+        amount: '', category: '', note: '', pos: '', country: '',
+        type_transaction: 'pengeluaran',
       })
       setFile(null)
       onSuccess?.()
@@ -101,29 +164,15 @@ function TransactionForm({ onClose, onSuccess }) {
     }
   }
 
-  const handleDrag = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
-    }
-  }
-
-  const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0])
-    }
-  }
+  const getCategoryOptions = () => 
+    data.type_transaction === 'pengeluaran' 
+      ? ['Transfer', 'Cash' ]
+      : ['Agency', 'Kandidat', 'Cabang']
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 animate-in max-h-[95vh] overflow-y-auto">
-
+        
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -141,147 +190,62 @@ function TransactionForm({ onClose, onSuccess }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+          <TransactionTypeSelector 
+            type={data.type_transaction} 
+            onChange={(type) => updateData('type_transaction', type)} 
+          />
+          
+          <InputField
+            label="Tanggal"
+            icon={<CalendarBlank size={14} />}
+            type="date"
+            value={data.date}
+            onChange={(value) => updateData('date', value)}
+            required
+          />
 
-          {/* Tipe Transaksi */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Tag size={14} /> Tipe Transaksi
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setData({ ...data, type_transaction: 'pemasukan', pos: '' })}
-                className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm ${data.type_transaction === 'pemasukan' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600'}`}
-              >
-                <TrendUp size={16} /> Pemasukan
-              </button>
-              <button
-                type="button"
-                onClick={() => setData({ ...data, type_transaction: 'pengeluaran', pos: '' })}
-                className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm ${data.type_transaction === 'pengeluaran' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 text-gray-600'}`}
-              >
-                <TrendDown size={16} /> Pengeluaran
-              </button>
-            </div>
-          </div>
+          <InputField
+            label="Negara"
+            icon="🌍"
+            value={data.country}
+            onChange={(value) => updateData('country', value)}
+            options={['Turki', 'Kuwait', 'Jepang']}
+            required
+          />
 
-          {/* Tanggal */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <CalendarBlank size={14} /> Tanggal
-            </label>
-            <input
-              type="date"
-              value={data.date}
-              onChange={(e) => setData({ ...data, date: e.target.value })}
-              className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50"
-              required
-            />
-          </div>
+          <PosSelector 
+            type={data.type_transaction}
+            pos={data.pos}
+            onChange={(pos) => updateData('pos', pos)}
+          />
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              🌍 negara
-            </label>
-            <select
-              value={data.country}
-              onChange={(e) => setData({ ...data, country: e.target.value })}
-              className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50"
-              required
-            >
-              <option value="">-- Pilih country --</option>
-              <option value="Turki">Turki</option>
-              <option value="Kuwait">Kuwait</option>
-              <option value="country Lain">country Lain</option>
-            </select>
-          </div>
+          <InputField
+            label="Kategori"
+            icon={<Tag size={14} />}
+            value={data.category}
+            onChange={(value) => updateData('category', value)}
+            options={getCategoryOptions()}
+            required
+          />
 
-          {/* Pos as Toggle Buttons */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Tag size={14} /> Pos
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(data.type_transaction === 'pemasukan'
-                ? ['Penempatan', 'Pelatihan']
-                : ['BSD', 'LPK']
-              ).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setData({ ...data, pos: item })}
-                  className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm
-                    ${data.pos === item
-                      ? data.type_transaction === 'pemasukan'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-red-500 bg-red-50 text-red-700'
-                      : 'border-gray-200 text-gray-600'
-                    }`}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
+          <InputField
+            label="Jumlah"
+            icon={<CurrencyDollarSimple size={14} />}
+            type="number"
+            value={data.amount}
+            onChange={(value) => updateData('amount', value)}
+            placeholder="Masukkan jumlah"
+            required
+          />
 
-          {/* Kategori */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <Tag size={14} /> Kategori
-            </label>
-            <select
-              value={data.category}
-              onChange={(e) => setData({ ...data, category: e.target.value })}
-              className="w-full p-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50"
-              required
-            >
-              <option value="">-- Pilih Kategori --</option>
-              {data.type_transaction === 'pengeluaran' ? (
-                <>
-                  <option value="Gaji">Gaji</option>
-                  <option value="Operasional">Operasional</option>
-                  <option value="CB">CB</option>
-                </>
-              ) : (
-                <>
-                  <option value="Agency">Agency</option>
-                  <option value="Kandidat">Kandidat</option>
-                  <option value="Cabang">Cabang</option>
-                </>
-              )}
-            </select>
-          </div>
+          <InputField
+            label="Catatan"
+            icon={<FileText size={14} />}
+            value={data.note}
+            onChange={(value) => updateData('note', value)}
+            placeholder="Catatan tambahan (opsional)"
+          />
 
-          {/* Jumlah */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <CurrencyDollarSimple size={14} /> Jumlah
-            </label>
-            <input
-              type="number"
-              value={data.amount}
-              onChange={(e) => setData({ ...data, amount: e.target.value })}
-              placeholder="Masukkan jumlah"
-              className="w-full p-2.5 border border-gray-200 rounded-xl text-sm"
-              required
-            />
-          </div>
-
-          {/* Catatan */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-              <FileText size={14} /> Catatan
-            </label>
-            <input
-              type="text"
-              value={data.note}
-              onChange={(e) => setData({ ...data, note: e.target.value })}
-              placeholder="Catatan tambahan (opsional)"
-              className="w-full p-2.5 border border-gray-200 rounded-xl text-sm"
-            />
-          </div>
-
-          {/* Upload Bukti */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <UploadSimple size={14} /> Bukti Transaksi
@@ -289,11 +253,16 @@ function TransactionForm({ onClose, onSuccess }) {
             <FilePicker onFileChange={setFile} />
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2.5 px-4 rounded-xl font-medium flex items-center justify-center gap-2 text-sm ${loading ? 'bg-gray-300 text-gray-500' : data.type_transaction === 'pemasukan' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white'}`}
+            className={`w-full py-2.5 px-4 rounded-xl font-medium flex items-center justify-center gap-2 text-sm ${
+              loading 
+                ? 'bg-gray-300 text-gray-500' 
+                : data.type_transaction === 'pemasukan' 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+            }`}
           >
             {loading ? (
               <>

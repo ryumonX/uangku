@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUp, PencilSimple, Trash } from 'phosphor-react'
-import InvoiceViewer from '../InvoiceViewer'
-import EditTransactionModal from '../EditTransactionModal'
-import { supabase } from '../../services/supabaseClient'
+import { useEffect, useState } from "react"
+import { ArrowDown, ArrowUp, PencilSimple, Trash } from "phosphor-react"
+import InvoiceViewer from "../InvoiceViewer"
+import EditTransactionModal from "../EditTransactionModal"
+import { supabase } from "../../services/supabaseClient"
 
-export default function TransactionTable({
-  transactions,
+export default function CandidateTable({
+  transactions = [], // ✅ default biar gak undefined
   editingId,
   setEditingId,
   handleEdit,
@@ -20,18 +20,43 @@ export default function TransactionTable({
   const [candidates, setCandidates] = useState([])
 
   useEffect(() => {
+    let isMounted = true
     const fetchCandidates = async () => {
       const { data, error } = await supabase
-        .from('candidates')
-        .select('id, name')
-      if (!error) setCandidates(data)
+        .from("candidates")
+        .select("id, name")
+
+      if (!error && isMounted) {
+        setCandidates(data || [])
+      }
     }
     fetchCandidates()
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const getCandidateName = (id) => {
     const candidate = candidates.find((c) => c.id === id)
-    return candidate ? candidate.name : '-'
+    return candidate ? candidate.name : "-"
+  }
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-"
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return "-"
+    return d.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+  }
+
+  const formatDay = (dateStr) => {
+    if (!dateStr) return ""
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return ""
+    return d.toLocaleDateString("id-ID", { weekday: "long" })
   }
 
   return (
@@ -41,15 +66,15 @@ export default function TransactionTable({
         <thead className="bg-gradient-to-r from-slate-100 to-slate-200 sticky top-0 z-10">
           <tr>
             {[
-              'Tanggal',
-              'Jumlah',
-              'Kategori',
-              'Pos',
-              'Negara',
-              // 'Kandidat',
-              'Catatan',
-              'Invoice',
-              'Aksi',
+              "Tanggal",
+              "Jumlah",
+              "Kategori",
+              "Pos",
+              "Negara",
+              // "Kandidat",
+              "Catatan",
+              "Invoice",
+              "Aksi",
             ].map((h) => (
               <th
                 key={h}
@@ -67,23 +92,13 @@ export default function TransactionTable({
             <tr
               key={t.id}
               className={`${
-                idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'
+                idx % 2 === 0 ? "bg-white" : "bg-slate-50"
               } hover:bg-slate-100 transition`}
             >
               {/* TANGGAL */}
               <td className="px-6 py-4 text-sm text-slate-800 text-left">
-                <div className="font-medium">
-                  {new Date(t.date).toLocaleDateString('id-ID', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {new Date(t.date).toLocaleDateString('id-ID', {
-                    weekday: 'long',
-                  })}
-                </div>
+                <div className="font-medium">{formatDate(t.date)}</div>
+                <div className="text-xs text-gray-500">{formatDay(t.date)}</div>
               </td>
 
               {/* JUMLAH */}
@@ -91,14 +106,14 @@ export default function TransactionTable({
                 <div
                   className={`text-sm font-bold ${
                     isIncome(t.type_transaction)
-                      ? 'text-emerald-600'
-                      : 'text-rose-600'
+                      ? "text-emerald-600"
+                      : "text-rose-600"
                   }`}
                 >
-                  {isIncome(t.type_transaction) ? '+' : '-'}
-                  {formatCurrency(Math.abs(t.amount))}
+                  {isIncome(t.type_transaction) ? "+" : "-"}
+                  {formatCurrency(Math.abs(t.amount || 0))}
                   <div className="text-xs text-gray-500 mt-1">
-                    {isIncome(t.type_transaction) ? 'Masuk' : 'Keluar'}
+                    {isIncome(t.type_transaction) ? "Masuk" : "Keluar"}
                   </div>
                 </div>
               </td>
@@ -115,18 +130,18 @@ export default function TransactionTable({
                   ) : (
                     <ArrowDown className="w-4 h-4 mr-1" />
                   )}
-                  {t.category}
+                  {t.category || "-"}
                 </span>
               </td>
 
               {/* POS */}
               <td className="px-6 py-4 text-sm text-center text-slate-700">
-                {t.pos || '-'}
+                {t.pos || "-"}
               </td>
 
               {/* NEGARA */}
               <td className="px-6 py-4 text-sm text-center text-slate-700">
-                {t.country || '-'}
+                {t.country || "-"}
               </td>
 
               {/* KANDIDAT
@@ -136,7 +151,7 @@ export default function TransactionTable({
 
               {/* CATATAN */}
               <td className="px-6 py-4 text-sm">
-                <span className="text-slate-700">{t.note || '-'}</span>
+                <span className="text-slate-700">{t.note || "-"}</span>
               </td>
 
               {/* INVOICE */}
@@ -173,6 +188,7 @@ export default function TransactionTable({
       {/* MODAL */}
       {editingId && (
         <EditTransactionModal
+          editingId={editingId} // ✅ kirim id juga
           editedData={editedData}
           setEditedData={setEditedData}
           handleSave={handleSave}

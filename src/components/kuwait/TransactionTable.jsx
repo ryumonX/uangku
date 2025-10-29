@@ -46,7 +46,6 @@ export default function TransactionTable({
               'Kategori',
               'Pos',
               'Negara',
-              // 'Kandidat',
               'Catatan',
               'Invoice',
               'Aksi',
@@ -128,11 +127,6 @@ export default function TransactionTable({
               <td className="px-6 py-4 text-sm text-center text-slate-700">
                 {t.country || '-'}
               </td>
-
-              {/* KANDIDAT
-              <td className="px-6 py-4 text-sm text-center text-slate-700">
-                {getCandidateName(t.candidate_id)}
-              </td> */}
 
               {/* CATATAN */}
               <td className="px-6 py-4 text-sm">
