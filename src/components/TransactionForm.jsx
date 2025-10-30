@@ -6,21 +6,23 @@ import {
 import { supabase } from '../services/supabaseClient'
 import FilePicker from './FilePicker'
 
-// Komponen untuk tipe transaksi
+// === Komponen: Tipe Transaksi ===
 const TransactionTypeSelector = ({ type, onChange }) => (
   <div className="space-y-2">
     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
       <Tag size={14} /> Tipe Transaksi
     </label>
     <div className="grid grid-cols-2 gap-2">
-      {['pemasukan', 'pengeluaran'].map(t => (
+      {['pemasukan', 'pengeluaran'].map((t) => (
         <button
           key={t}
           type="button"
           onClick={() => onChange(t)}
           className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm ${
-            type === t 
-              ? `border-${t === 'pemasukan' ? 'green' : 'red'}-500 bg-${t === 'pemasukan' ? 'green' : 'red'}-50 text-${t === 'pemasukan' ? 'green' : 'red'}-700`
+            type === t
+              ? t === 'pemasukan'
+                ? 'border-green-500 bg-green-50 text-green-700'
+                : 'border-red-500 bg-red-50 text-red-700'
               : 'border-gray-200 text-gray-600'
           }`}
         >
@@ -32,25 +34,25 @@ const TransactionTypeSelector = ({ type, onChange }) => (
   </div>
 )
 
-// Komponen untuk pos selector
+// === Komponen: Pos Selector ===
 const PosSelector = ({ type, pos, onChange }) => (
   <div className="space-y-2">
     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
       <Tag size={14} /> Pos
     </label>
     <div className="grid grid-cols-2 gap-2">
-      {(type === 'pemasukan' ? ['Penempatan', 'Pelatihan'] : ['BSD', 'LPK']).map(item => (
+      {(type === 'pemasukan' ? ['Penempatan', 'Pelatihan'] : ['BSD', 'LPK']).map((item) => (
         <button
           key={item}
           type="button"
           onClick={() => onChange(item)}
-          className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm
-            ${pos === item
+          className={`p-2 rounded-xl border-2 flex items-center justify-center gap-2 text-sm ${
+            pos === item
               ? type === 'pemasukan'
                 ? 'border-green-500 bg-green-50 text-green-700'
                 : 'border-red-500 bg-red-50 text-red-700'
               : 'border-gray-200 text-gray-600'
-            }`}
+          }`}
         >
           {item}
         </button>
@@ -59,7 +61,7 @@ const PosSelector = ({ type, pos, onChange }) => (
   </div>
 )
 
-// Komponen input field
+// === Komponen: Input Field ===
 const InputField = ({ label, icon, type = 'text', value, onChange, placeholder, required = false, options = null }) => (
   <div className="space-y-2">
     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -73,7 +75,7 @@ const InputField = ({ label, icon, type = 'text', value, onChange, placeholder, 
         required={required}
       >
         <option value="">-- Pilih {label} --</option>
-        {options.map(opt => (
+        {options.map((opt) => (
           <option key={opt.value || opt} value={opt.value || opt}>
             {opt.label || opt}
           </option>
@@ -92,51 +94,57 @@ const InputField = ({ label, icon, type = 'text', value, onChange, placeholder, 
   </div>
 )
 
+// === Komponen Utama: TransactionForm ===
 function TransactionForm({ onClose, onSuccess }) {
   const [data, setData] = useState({
     date: new Date().toISOString().split('T')[0],
-    pos: '', amount: '', category: '', note: '', country: '',
+    pos: '',
+    amount: '',
+    category: '',
+    note: '',
+    country: '',
     type_transaction: 'pengeluaran',
   })
+
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const updateData = (key, value) => setData(prev => ({ ...prev, [key]: value }))
+  const updateData = (key, value) => setData((prev) => ({ ...prev, [key]: value }))
 
-  const handleFileUpload = async () => {
+  // === Upload file ke Supabase Storage ===
+  const uploadFileToSupabase = async () => {
     if (!file) return null
-    
+
     const fileExt = file.name.split('.').pop()
     const filePath = `invoices/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-    
-    const { data: uploadData, error } = await supabase.storage
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('invoices')
       .upload(filePath, file)
-    
-    if (error) throw new Error('Gagal upload file: ' + error.message)
-    
-    const { data: publicData } = supabase.storage
-      .from('invoices')
-      .getPublicUrl(uploadData.path)
-    
+
+    if (uploadError) throw new Error('Gagal upload file: ' + uploadError.message)
+
+    const { data: publicData } = supabase.storage.from('invoices').getPublicUrl(uploadData.path)
     return publicData?.publicUrl
   }
 
+  // === Submit transaksi ===
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    if (!data.amount || isNaN(data.amount) || parseFloat(data.amount) <= 0) {
-      alert('Jumlah harus angka yang valid dan lebih dari 0')
+
+    if (!data.amount || isNaN(+data.amount) || +data.amount <= 0) {
+      alert('Jumlah harus angka valid dan lebih dari 0')
       return
     }
 
     setLoading(true)
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      const session = sessionData?.session
       if (!session || sessionError) throw new Error('Kamu belum login atau sesi habis')
-      
-      const invoice_url = await handleFileUpload()
-      
+
+      const invoice_url = await uploadFileToSupabase()
+
       const payload = {
         ...data,
         amount: parseFloat(data.amount),
@@ -144,13 +152,17 @@ function TransactionForm({ onClose, onSuccess }) {
         user_id: session.user.id,
       }
 
-      const { error } = await supabase.from('transactions').insert(payload)
-      if (error) throw new Error(error.message)
+      const { error: insertError } = await supabase.from('transactions').insert(payload)
+      if (insertError) throw new Error(insertError.message)
 
       alert('Transaksi berhasil disimpan!')
       setData({
         date: new Date().toISOString().split('T')[0],
-        amount: '', category: '', note: '', pos: '', country: '',
+        pos: '',
+        amount: '',
+        category: '',
+        note: '',
+        country: '',
         type_transaction: 'pengeluaran',
       })
       setFile(null)
@@ -158,26 +170,36 @@ function TransactionForm({ onClose, onSuccess }) {
       onClose()
     } catch (err) {
       console.error(err)
-      alert(err.message || 'Terjadi kesalahan saat menyimpan transaksi')
+      alert(err.message || 'Terjadi kesalahan saat menyimpan transaksi.')
     } finally {
       setLoading(false)
     }
   }
 
-  const getCategoryOptions = () => 
-    data.type_transaction === 'pengeluaran' 
-      ? ['Transfer', 'Cash' ]
+  const getCategoryOptions = () =>
+    data.type_transaction === 'pengeluaran'
+      ? ['Transfer', 'Cash']
       : ['Agency', 'Kandidat', 'Cabang']
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 animate-in max-h-[95vh] overflow-y-auto">
-        
+      <div className="relative w-full max-w-md mx-auto bg-white rounded-2xl shadow-2xl max-h-[95vh] overflow-y-auto">
+
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className={`p-1.5 sm:p-2 rounded-xl ${data.type_transaction === 'pemasukan' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-              {data.type_transaction === 'pemasukan' ? <TrendUp size={18} /> : <TrendDown size={18} />}
+            <div
+              className={`p-1.5 sm:p-2 rounded-xl ${
+                data.type_transaction === 'pemasukan'
+                  ? 'bg-green-100 text-green-600'
+                  : 'bg-red-100 text-red-600'
+              }`}
+            >
+              {data.type_transaction === 'pemasukan' ? (
+                <TrendUp size={18} />
+              ) : (
+                <TrendDown size={18} />
+              )}
             </div>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
               Tambah {data.type_transaction === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}
@@ -189,12 +211,12 @@ function TransactionForm({ onClose, onSuccess }) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
-          <TransactionTypeSelector 
-            type={data.type_transaction} 
-            onChange={(type) => updateData('type_transaction', type)} 
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5">
+          <TransactionTypeSelector
+            type={data.type_transaction}
+            onChange={(type) => updateData('type_transaction', type)}
           />
-          
+
           <InputField
             label="Tanggal"
             icon={<CalendarBlank size={14} />}
@@ -213,7 +235,7 @@ function TransactionForm({ onClose, onSuccess }) {
             required
           />
 
-          <PosSelector 
+          <PosSelector
             type={data.type_transaction}
             pos={data.pos}
             onChange={(pos) => updateData('pos', pos)}
@@ -246,6 +268,7 @@ function TransactionForm({ onClose, onSuccess }) {
             placeholder="Catatan tambahan (opsional)"
           />
 
+          {/* File Picker */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
               <UploadSimple size={14} /> Bukti Transaksi
@@ -253,14 +276,15 @@ function TransactionForm({ onClose, onSuccess }) {
             <FilePicker onFileChange={setFile} />
           </div>
 
+          {/* Tombol Submit */}
           <button
             type="submit"
             disabled={loading}
             className={`w-full py-2.5 px-4 rounded-xl font-medium flex items-center justify-center gap-2 text-sm ${
-              loading 
-                ? 'bg-gray-300 text-gray-500' 
-                : data.type_transaction === 'pemasukan' 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+              loading
+                ? 'bg-gray-300 text-gray-500'
+                : data.type_transaction === 'pemasukan'
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-red-600 hover:bg-red-700 text-white'
             }`}
           >
